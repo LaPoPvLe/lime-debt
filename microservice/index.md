@@ -2,4 +2,5 @@
 
 ### 服务发现
 
--  [consul](/microservice/consul)：
+-  [consul](microservice/consul)：
+
