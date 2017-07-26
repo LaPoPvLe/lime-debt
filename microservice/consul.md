@@ -639,5 +639,101 @@ consul.			0	IN	SOA	ns.consul. postmaster.consul. 1501059152 3600 600 86400 0
 ...
 ```
 
+### KV 数据
 
+Consul 提供了一个易于使用的 KV 存储器。可以用来存放动态配置，协助服务协调，构建领导人选举，和启用任何开发者可能想到的构建。
 
+#### 简单用法
+
+有两种方式与 Consul 的存储器交互：
+
+- **HTTP API**；
+- **Consul KV CLI**。
+
+##### KV CLI
+
+简单易于入门。
+
+示例：获取键路径名为 `redis/config/minconns` 的值：
+
+```shell
+$ consul kv get redis/config/minconns
+Error! No key exists at: redis/config/minconns
+```
+
+因为 KV 存储器中并没有任何数据，所以没有结果。
+
+示例：往 KV 存储器中插入或者放入值。
+
+```shell
+$ consul kv put redis/config/minconns 1
+Success! Data written to: redis/config/minconns
+$ consul kv put redis/config/maxconns 25
+Success! Data written to: redis/config/maxconns
+$ consul kv put -flags=42 redis/config/users/admin abcd1234
+Success! Data written to: redis/config/users/admin
+```
+
+示例：获取值及其元数据详情
+
+```shell
+$ consul kv get -detailed redis/config/minconns
+CreateIndex      463
+Flags            0
+Key              redis/config/minconns
+LockIndex        0
+ModifyIndex      463
+Session          -
+Value            1
+```
+
+键 "redis/config/users/admin"，设置了一个值为 42 的标志。所有的键支持设置一个 64-bit 整型标志值。并不是被 Consul 内部调用，而是给客户端添加有意义的元数据到任何 KV。
+
+示例：列举存储器中所有的键值，按字典序排序：
+
+```
+$ consul kv get -recurse
+redis/config/maxconns:25
+redis/config/minconns:1
+redis/config/users/admin:abcd1234
+```
+
+示例：删除键
+
+```shell
+$ consul kv delete redis/config/minconns
+Success! Deleted key: redis/config/minconns
+```
+
+示例：循环删除指定前缀的键
+
+```shell
+$ consul delete -recurse redis
+Success! Deleted keys with prefix: redis
+```
+
+示例：更新已存在的键值：
+
+```shell
+$ consul kv put foo bar
+
+$ consul kv get foo
+bar
+
+$ consul kv put foo zip
+
+$ consul kv get foo
+zip
+```
+
+示例：原子级键更新，通过 Check-And-Set 操作：
+
+```shell
+$ consul kv put -cas -modify-index=123 foo bar
+Success! Data written to: foo
+
+$ consul kv put -cas -modify-index=123 foo bar
+Error! Did not write to foo: CAS failed
+```
+
+> **注意**：`modify-index=123` 需要先查看其详情中的 ModifyIndex 值
